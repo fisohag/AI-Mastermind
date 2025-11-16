@@ -1,0 +1,8 @@
+{
+  "name": "Gemini Calorie Counter",
+  "description": "A modern calorie tracking application that allows users to log food via text search, barcode scanning, and intelligent voice input powered by the Gemini API. It features a comprehensive dashboard with real-time tracking of calories and macronutrients against user-defined goals.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
