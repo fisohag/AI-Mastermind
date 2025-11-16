@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface CircularProgressProps {
@@ -6,24 +5,21 @@ interface CircularProgressProps {
 }
 
 const CircularProgress: React.FC<CircularProgressProps> = ({ percentage }) => {
-  const size = 80;
+  const size = 90;
   const strokeWidth = 8;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (percentage / 100) * circumference;
 
-  let colorClass = 'text-emerald-500';
-  if (percentage > 100) {
-    colorClass = 'text-red-500';
-  } else if (percentage >= 80) {
-    colorClass = 'text-yellow-500';
-  }
+  const colorClass = percentage > 100 ? 'text-red-500' : 'text-gray-200';
+  const textColorClass = percentage > 100 ? 'text-red-400' : 'text-gray-200';
+
 
   return (
     <div className="relative inline-flex items-center justify-center">
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
         <circle
-          className="text-gray-200 dark:text-gray-700"
+          className="text-gray-800"
           strokeWidth={strokeWidth}
           stroke="currentColor"
           fill="transparent"
@@ -44,7 +40,7 @@ const CircularProgress: React.FC<CircularProgressProps> = ({ percentage }) => {
           cy={size / 2}
         />
       </svg>
-      <span className="absolute text-lg font-bold text-gray-700 dark:text-gray-200">{Math.round(percentage)}%</span>
+      <span className={`absolute text-xl font-bold ${textColorClass}`}>{Math.round(percentage)}%</span>
     </div>
   );
 };

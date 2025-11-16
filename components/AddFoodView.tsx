@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Food, MealType, LogEntry, GeminiFoodResponse } from '../types';
 import { searchFood, findFoodByBarcode } from '../services/foodService';
@@ -241,14 +240,14 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
   };
   
   const renderGeminiResults = () => (
-    <div className="mt-4 text-left">
-        <h3 className="font-semibold text-gray-700 dark:text-gray-200">Identified Food:</h3>
+    <div className="mt-6 text-left">
+        <h3 className="font-semibold text-gray-300">Identified Food:</h3>
         <ul className="mt-2 space-y-2">
             {geminiResults.map((item, index) => (
-                <li key={index} className="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg flex justify-between items-center cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900/50" onClick={() => handleSelectGeminiFood(item)}>
+                <li key={index} className="p-3 bg-[#2a2a2a] border border-gray-800 rounded-lg flex justify-between items-center cursor-pointer hover:bg-gray-700" onClick={() => handleSelectGeminiFood(item)}>
                 <div>
-                    <p className="font-medium">{item.name}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{item.quantity} {item.servingUnit} &bull; {Math.round(item.calories * item.quantity)} kcal</p>
+                    <p className="font-medium text-gray-100">{item.name}</p>
+                    <p className="text-sm text-gray-400">{item.quantity} {item.servingUnit} &bull; {Math.round(item.calories * item.quantity)} kcal</p>
                 </div>
                 </li>
             ))}
@@ -258,16 +257,16 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
 
   const renderContent = () => {
     if (isLoading) {
-      return <div className="text-center p-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto"></div>
-        <p className="mt-4 text-gray-500 dark:text-gray-400">
+      return <div className="text-center p-8 flex flex-col justify-center items-center h-full">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-400 mx-auto"></div>
+        <p className="mt-4 text-gray-500">
             {activeTab === 'scan' ? 'Scanning...' : 'Identifying...'}
         </p>
       </div>;
     }
 
     if (error) {
-        return <div className="text-center p-8 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-lg">
+        return <div className="text-center p-8 text-red-400 rounded-lg h-full flex flex-col justify-center items-center">
             <p>{error}</p>
         </div>
     }
@@ -275,7 +274,7 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
     switch (activeTab) {
       case 'photo':
         return (
-          <div className="text-center p-8">
+          <div className="text-center p-4">
             <input
               type="file"
               id="image-upload"
@@ -288,11 +287,11 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
               className="cursor-pointer group"
             >
               {imagePreview ? (
-                <img src={imagePreview} alt="Food preview" className="w-64 h-40 mx-auto object-cover rounded-lg mb-4" />
+                <img src={imagePreview} alt="Food preview" className="w-full h-40 object-cover rounded-lg mb-4 border border-gray-700" />
               ) : (
-                <div className="w-64 h-40 mx-auto border-4 border-dashed border-gray-400 dark:border-gray-600 rounded-lg flex flex-col items-center justify-center mb-4 group-hover:border-emerald-500 transition-colors">
-                  <CameraIcon className="w-16 h-16 text-gray-400 dark:text-gray-500 group-hover:text-emerald-500 transition-colors" />
-                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Upload a photo</p>
+                <div className="w-full h-40 border-2 border-dashed border-gray-700 rounded-lg flex flex-col items-center justify-center mb-4 group-hover:border-gray-500 transition-colors">
+                  <CameraIcon className="w-12 h-12 text-gray-600 group-hover:text-gray-400 transition-colors" />
+                  <p className="mt-2 text-sm text-gray-500">Upload a photo</p>
                 </div>
               )}
             </label>
@@ -300,25 +299,25 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
           </div>
         );
       case 'scan':
-        return <div className="text-center p-8">
-            <p className="mb-4 text-gray-600 dark:text-gray-300">Position the barcode inside the frame.</p>
-            <div className="w-64 h-40 mx-auto border-4 border-dashed border-gray-400 dark:border-gray-600 rounded-lg flex items-center justify-center">
-                <ScanIcon className="w-16 h-16 text-gray-400 dark:text-gray-500"/>
+        return <div className="text-center p-4 flex flex-col justify-center items-center h-full">
+            <p className="mb-4 text-gray-400">Position the barcode inside the frame.</p>
+            <div className="w-64 h-32 mx-auto border-2 border-dashed border-gray-700 rounded-lg flex items-center justify-center">
+                <ScanIcon className="w-16 h-16 text-gray-600"/>
             </div>
-            <button onClick={handleBarcodeScan} className="mt-6 w-full bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-700 transition-colors">
+            <button onClick={handleBarcodeScan} className="mt-6 w-full bg-gray-200 text-black font-bold py-3 px-4 rounded-lg hover:bg-white transition-colors">
                 Simulate Scan
             </button>
         </div>;
       case 'voice':
-        return <div className="text-center p-8">
+        return <div className="text-center p-4 flex flex-col justify-center items-center h-full">
             <button 
                 onClick={isListening ? stopListening : startListening}
-                className={`mx-auto w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 ${isListening ? 'bg-red-500 animate-pulse' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                className={`mx-auto w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 ${isListening ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'bg-gray-800 hover:bg-gray-700'}`}
             >
-                <MicIcon className="w-12 h-12 text-white" />
+                <MicIcon className="w-10 h-10 text-white" />
             </button>
-            <p className="mt-4 text-gray-600 dark:text-gray-300 min-h-[2.5em]">
-                {isListening ? "Listening..." : voiceTranscript ? `You said: "${voiceTranscript}"` : "Tap to speak what you ate."}
+            <p className="mt-4 text-gray-400 min-h-[2.5em]">
+                {isListening ? "Listening..." : voiceTranscript ? `"${voiceTranscript}"` : "Tap to speak what you ate"}
             </p>
             {geminiResults.length > 0 && renderGeminiResults()}
         </div>;
@@ -326,21 +325,21 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
       default:
         return <div>
             <div className="relative">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600" />
                 <input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => handleSearch(e.target.value)}
                     placeholder="e.g., 2 slices of pizza"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                    className="w-full pl-10 pr-4 py-3 border-b-2 border-gray-700 bg-transparent focus:border-white outline-none transition-colors"
                 />
             </div>
             {searchResults.length > 0 && (
-                <ul className="mt-2 space-y-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                <ul className="mt-4 space-y-2 max-h-60 overflow-y-auto">
                     {searchResults.map(food => (
-                        <li key={food.id} onClick={() => handleSelectFood(food)} className="p-3 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 cursor-pointer flex justify-between items-center">
-                            <span>{food.name}</span>
-                            <span className="text-sm text-gray-500 dark:text-gray-400">{food.calories} kcal / {food.servingSize}{food.servingUnit}</span>
+                        <li key={food.id} onClick={() => handleSelectFood(food)} className="p-3 bg-[#2a2a2a] border border-gray-800 rounded-lg hover:bg-gray-700 cursor-pointer flex justify-between items-center">
+                            <span className="text-gray-200">{food.name}</span>
+                            <span className="text-sm text-gray-500">{food.calories} kcal / {food.servingSize}{food.servingUnit}</span>
                         </li>
                     ))}
                 </ul>
@@ -351,41 +350,41 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
 
   if (selectedFood) {
     return (
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg space-y-4">
+      <div className="bg-[#1a1a1a] p-6 rounded-lg shadow-lg border border-gray-800 space-y-6">
         <div className="flex justify-between items-start">
             <div>
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">{selectedFood.name}</h2>
-                <p className="text-gray-500 dark:text-gray-400">{Math.round(selectedFood.calories * quantity)} kcal</p>
+                <h2 className="text-2xl font-serif text-gray-100">{selectedFood.name}</h2>
+                <p className="text-gray-400">{Math.round(selectedFood.calories * quantity)} kcal</p>
             </div>
-            <button onClick={() => setSelectedFood(null)} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
-                <XIcon className="w-5 h-5 text-gray-600 dark:text-gray-300"/>
+            <button onClick={() => setSelectedFood(null)} className="p-1 rounded-full hover:bg-gray-800">
+                <XIcon className="w-5 h-5 text-gray-500"/>
             </button>
         </div>
         
         <div className="grid grid-cols-3 gap-4 text-center">
-            <div><p className="text-sm text-gray-500 dark:text-gray-400">Protein</p><p className="font-semibold">{Math.round(selectedFood.protein * quantity)}g</p></div>
-            <div><p className="text-sm text-gray-500 dark:text-gray-400">Carbs</p><p className="font-semibold">{Math.round(selectedFood.carbs * quantity)}g</p></div>
-            <div><p className="text-sm text-gray-500 dark:text-gray-400">Fat</p><p className="font-semibold">{Math.round(selectedFood.fat * quantity)}g</p></div>
+            <div><p className="text-sm text-gray-500">Protein</p><p className="font-semibold text-gray-200">{Math.round(selectedFood.protein * quantity)}g</p></div>
+            <div><p className="text-sm text-gray-500">Carbs</p><p className="font-semibold text-gray-200">{Math.round(selectedFood.carbs * quantity)}g</p></div>
+            <div><p className="text-sm text-gray-500">Fat</p><p className="font-semibold text-gray-200">{Math.round(selectedFood.fat * quantity)}g</p></div>
         </div>
 
         <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quantity ({selectedFood.servingUnit})</label>
+            <label className="block text-sm font-medium text-gray-500 mb-2">Quantity ({selectedFood.servingUnit})</label>
             <input
                 type="number"
                 value={quantity}
                 onChange={(e) => setQuantity(Math.max(0.1, parseFloat(e.target.value)))}
                 step="0.1"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                className="w-full px-3 py-2 border border-gray-700 rounded-lg bg-[#0d0d0d] text-white"
             />
         </div>
         <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Meal</label>
-            <select value={meal} onChange={(e) => setMeal(e.target.value as MealType)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700">
+            <label className="block text-sm font-medium text-gray-500 mb-2">Meal</label>
+            <select value={meal} onChange={(e) => setMeal(e.target.value as MealType)} className="w-full px-3 py-2 border border-gray-700 rounded-lg bg-[#0d0d0d] text-white">
                 {Object.values(MealType).map(m => <option key={m} value={m}>{m}</option>)}
             </select>
         </div>
 
-        <button onClick={handleAddFood} className="w-full bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-700 transition-colors">
+        <button onClick={handleAddFood} className="w-full bg-white text-black font-bold py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors">
             Add to Today
         </button>
       </div>
@@ -394,17 +393,24 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
 
   return (
     <div className="space-y-4">
-        <div className="grid grid-cols-4 gap-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
-            <button onClick={() => setActiveTab('search')} className={`flex-1 py-2 px-4 rounded-md text-sm font-semibold transition-colors ${activeTab === 'search' ? 'bg-white dark:bg-gray-800 text-emerald-600 shadow' : 'text-gray-600 dark:text-gray-300'}`}>Search</button>
-            <button onClick={() => setActiveTab('scan')} className={`flex-1 py-2 px-4 rounded-md text-sm font-semibold transition-colors ${activeTab === 'scan' ? 'bg-white dark:bg-gray-800 text-emerald-600 shadow' : 'text-gray-600 dark:text-gray-300'}`}>Scan</button>
-            <button onClick={() => setActiveTab('voice')} className={`flex-1 py-2 px-4 rounded-md text-sm font-semibold transition-colors ${activeTab === 'voice' ? 'bg-white dark:bg-gray-800 text-emerald-600 shadow' : 'text-gray-600 dark:text-gray-300'}`}>Voice</button>
-            <button onClick={() => setActiveTab('photo')} className={`flex-1 py-2 px-4 rounded-md text-sm font-semibold transition-colors ${activeTab === 'photo' ? 'bg-white dark:bg-gray-800 text-emerald-600 shadow' : 'text-gray-600 dark:text-gray-300'}`}>Photo</button>
+        <div className="flex justify-around border-b border-gray-800">
+            <TabButton title="Search" isActive={activeTab === 'search'} onClick={() => setActiveTab('search')} />
+            <TabButton title="Scan" isActive={activeTab === 'scan'} onClick={() => setActiveTab('scan')} />
+            <TabButton title="Voice" isActive={activeTab === 'voice'} onClick={() => setActiveTab('voice')} />
+            <TabButton title="Photo" isActive={activeTab === 'photo'} onClick={() => setActiveTab('photo')} />
         </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md min-h-[250px]">
+        <div className="bg-[#1a1a1a] p-4 rounded-lg shadow-md min-h-[300px] border border-gray-800">
             {renderContent()}
         </div>
     </div>
   );
 };
+
+const TabButton: React.FC<{title: string; isActive: boolean; onClick: () => void}> = ({ title, isActive, onClick}) => (
+  <button onClick={onClick} className={`flex-1 py-3 text-center text-sm font-semibold transition-colors relative ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}>
+    {title}
+    {isActive && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white"></div>}
+  </button>
+);
 
 export default AddFoodView;
