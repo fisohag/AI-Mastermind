@@ -1,7 +1,8 @@
 
 import { Food } from '../types';
+import { searchFoodWithNutrition } from './geminiService';
 
-// Mock food database
+// Mock food database - kept for barcode scanning simulation
 const mockFoodDatabase: Food[] = [
   { id: '1', name: 'Chicken Breast', calories: 165, protein: 31, carbs: 0, fat: 3.6, servingSize: 100, servingUnit: 'g' },
   { id: '2', name: 'Apple', calories: 52, protein: 0.3, carbs: 14, fat: 0.2, servingSize: 100, servingUnit: 'g' },
@@ -17,16 +18,27 @@ const mockFoodDatabase: Food[] = [
 ];
 
 export const searchFood = async (query: string): Promise<Food[]> => {
-  console.log(`Searching for: ${query}`);
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 300));
-
+  console.log(`Searching for: ${query} using Gemini`);
   if (!query) return [];
 
-  const lowerCaseQuery = query.toLowerCase();
-  return mockFoodDatabase.filter(food =>
-    food.name.toLowerCase().includes(lowerCaseQuery)
-  );
+  try {
+    const geminiResults = await searchFoodWithNutrition(query);
+    // Transform Gemini response to the app's Food type
+    const foods: Food[] = geminiResults.map(item => ({
+      id: `${item.name.toLowerCase().replace(/\s/g, '-')}-${Date.now()}`, // Create a semi-unique ID
+      name: item.name,
+      calories: item.calories,
+      protein: item.protein,
+      carbs: item.carbs,
+      fat: item.fat,
+      servingSize: item.servingSize,
+      servingUnit: item.servingUnit,
+    }));
+    return foods;
+  } catch (error) {
+    console.error('Error searching food with Gemini:', error);
+    return [];
+  }
 };
 
 export const findFoodByBarcode = async (barcode: string): Promise<Food | null> => {

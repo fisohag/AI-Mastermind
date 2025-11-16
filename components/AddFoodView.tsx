@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Food, MealType, LogEntry, GeminiFoodResult } from '../types';
+import { Food, MealType, LogEntry, GeminiFoodResponse } from '../types';
 import { searchFood, findFoodByBarcode } from '../services/foodService';
-import { parseFoodFromVoice } from '../services/geminiService';
-import { SearchIcon, ScanIcon, MicIcon, XIcon } from './icons/Icons';
+import { parseFoodFromVoice, identifyFoodFromImage } from '../services/geminiService';
+import { SearchIcon, ScanIcon, MicIcon, XIcon, CameraIcon } from './icons/Icons';
 
 // FIX: Add type definitions for the Web Speech API to resolve TypeScript errors.
 interface SpeechRecognition {
@@ -32,7 +32,7 @@ interface AddFoodViewProps {
 }
 
 const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
-  const [activeTab, setActiveTab] = useState<'search' | 'scan' | 'voice'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'scan' | 'voice' | 'photo'>('search');
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Food[]>([]);
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
@@ -41,11 +41,13 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Voice state
+  // Voice & Photo state
   const [isListening, setIsListening] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState('');
-  const [voiceResults, setVoiceResults] = useState<{ food: Food; geminiData: GeminiFoodResult }[]>([]);
+  const [geminiResults, setGeminiResults] = useState<GeminiFoodResponse[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
 
   useEffect(() => {
     // Set default meal based on time of day
@@ -57,16 +59,14 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
   }, []);
   
   useEffect(() => {
-    if (activeTab !== 'search') {
-      setSearchTerm('');
-      setSearchResults([]);
-    }
-    if (activeTab !== 'voice') {
-        stopListening();
-        setVoiceTranscript('');
-        setVoiceResults([]);
-    }
-     setError(null);
+    // Reset state when switching tabs
+    setSearchTerm('');
+    setSearchResults([]);
+    stopListening();
+    setVoiceTranscript('');
+    setImagePreview(null);
+    setGeminiResults([]);
+    setError(null);
   }, [activeTab]);
 
   const handleSearch = async (query: string) => {
@@ -92,7 +92,23 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
     setQuantity(defaultQuantity);
     setSearchResults([]);
     setSearchTerm('');
-    setVoiceResults([]);
+    setGeminiResults([]);
+  };
+
+  const handleSelectGeminiFood = (item: GeminiFoodResponse) => {
+    const food: Food = {
+        id: `${item.name.toLowerCase().replace(/\s/g, '-')}-${Date.now()}`,
+        name: item.name,
+        calories: item.calories,
+        protein: item.protein,
+        carbs: item.carbs,
+        fat: item.fat,
+        servingSize: item.servingSize,
+        servingUnit: item.servingUnit,
+    };
+    setSelectedFood(food);
+    setQuantity(item.quantity);
+    setGeminiResults([]);
   };
 
   const handleAddFood = () => {
@@ -106,9 +122,7 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
       quantity,
     };
     
-    // Scale macros based on portion size if necessary
-    const scale = (selectedFood.servingSize * quantity) / 100; // Assuming nutrition is per 100g
-    // For simplicity here we assume the base calories are per serving unit and just multiply by quantity
+    // Nutrition facts are per serving, so just multiply by quantity
     entry.calories = selectedFood.calories * quantity;
     entry.protein = selectedFood.protein * quantity;
     entry.carbs = selectedFood.carbs * quantity;
@@ -139,6 +153,44 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
     }, 1500);
   };
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const dataUrl = e.target?.result as string;
+        setImagePreview(dataUrl);
+        setIsLoading(true);
+        setError(null);
+        setGeminiResults([]);
+
+        try {
+            const [header, base64Data] = dataUrl.split(',');
+            const mimeType = header.match(/:(.*?);/)?.[1];
+
+            if (!base64Data || !mimeType) {
+                throw new Error("Invalid image format");
+            }
+
+            const parsedItems = await identifyFoodFromImage(base64Data, mimeType);
+            if (parsedItems.length === 0) {
+              setError("Couldn't identify food from your image. Please try another one.");
+            } else {
+              setGeminiResults(parsedItems);
+            }
+        } catch (err) {
+            setError('Failed to process image.');
+            console.error(err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  };
+
+
   const startListening = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -163,19 +215,14 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
         setVoiceTranscript(transcript);
         setIsLoading(true);
         setError(null);
-        setVoiceResults([]);
+        setGeminiResults([]);
 
         try {
             const parsedItems = await parseFoodFromVoice(transcript);
             if (parsedItems.length === 0) {
               setError("Couldn't identify food from your speech. Please try again.");
             } else {
-              const foodFetchPromises = parsedItems.map(async item => {
-                const searchRes = await searchFood(item.searchTerm);
-                return { food: searchRes[0], geminiData: item }; // Take the first result
-              });
-              const results = (await Promise.all(foodFetchPromises)).filter(r => r.food);
-              setVoiceResults(results);
+              setGeminiResults(parsedItems);
             }
         } catch (e) {
             setError('Failed to process voice input.');
@@ -192,13 +239,29 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
       setIsListening(false);
     }
   };
+  
+  const renderGeminiResults = () => (
+    <div className="mt-4 text-left">
+        <h3 className="font-semibold text-gray-700 dark:text-gray-200">Identified Food:</h3>
+        <ul className="mt-2 space-y-2">
+            {geminiResults.map((item, index) => (
+                <li key={index} className="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg flex justify-between items-center cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900/50" onClick={() => handleSelectGeminiFood(item)}>
+                <div>
+                    <p className="font-medium">{item.name}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{item.quantity} {item.servingUnit} &bull; {Math.round(item.calories * item.quantity)} kcal</p>
+                </div>
+                </li>
+            ))}
+        </ul>
+    </div>
+  );
 
   const renderContent = () => {
     if (isLoading) {
       return <div className="text-center p-8">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto"></div>
         <p className="mt-4 text-gray-500 dark:text-gray-400">
-            {activeTab === 'scan' ? 'Scanning...' : activeTab === 'voice' && !voiceTranscript ? 'Listening...' : 'Processing...'}
+            {activeTab === 'scan' ? 'Scanning...' : 'Identifying...'}
         </p>
       </div>;
     }
@@ -210,6 +273,32 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
     }
 
     switch (activeTab) {
+      case 'photo':
+        return (
+          <div className="text-center p-8">
+            <input
+              type="file"
+              id="image-upload"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            <label
+              htmlFor="image-upload"
+              className="cursor-pointer group"
+            >
+              {imagePreview ? (
+                <img src={imagePreview} alt="Food preview" className="w-64 h-40 mx-auto object-cover rounded-lg mb-4" />
+              ) : (
+                <div className="w-64 h-40 mx-auto border-4 border-dashed border-gray-400 dark:border-gray-600 rounded-lg flex flex-col items-center justify-center mb-4 group-hover:border-emerald-500 transition-colors">
+                  <CameraIcon className="w-16 h-16 text-gray-400 dark:text-gray-500 group-hover:text-emerald-500 transition-colors" />
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Upload a photo</p>
+                </div>
+              )}
+            </label>
+            {geminiResults.length > 0 && renderGeminiResults()}
+          </div>
+        );
       case 'scan':
         return <div className="text-center p-8">
             <p className="mb-4 text-gray-600 dark:text-gray-300">Position the barcode inside the frame.</p>
@@ -231,19 +320,7 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
             <p className="mt-4 text-gray-600 dark:text-gray-300 min-h-[2.5em]">
                 {isListening ? "Listening..." : voiceTranscript ? `You said: "${voiceTranscript}"` : "Tap to speak what you ate."}
             </p>
-            {voiceResults.length > 0 && <div className="mt-4 text-left">
-                <h3 className="font-semibold text-gray-700 dark:text-gray-200">Did you mean?</h3>
-                <ul className="mt-2 space-y-2">
-                    {voiceResults.map(({ food, geminiData }, index) => (
-                        <li key={index} className="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg flex justify-between items-center cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900/50" onClick={() => handleSelectFood(food, geminiData.quantity)}>
-                        <div>
-                            <p className="font-medium">{food.name}</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{geminiData.quantity} {geminiData.unit} &bull; {Math.round(food.calories * geminiData.quantity)} kcal</p>
-                        </div>
-                        </li>
-                    ))}
-                </ul>
-            </div>}
+            {geminiResults.length > 0 && renderGeminiResults()}
         </div>;
       case 'search':
       default:
@@ -254,7 +331,7 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
                     type="text"
                     value={searchTerm}
                     onChange={(e) => handleSearch(e.target.value)}
-                    placeholder="e.g., chicken breast"
+                    placeholder="e.g., 2 slices of pizza"
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
                 />
             </div>
@@ -263,7 +340,7 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
                     {searchResults.map(food => (
                         <li key={food.id} onClick={() => handleSelectFood(food)} className="p-3 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 cursor-pointer flex justify-between items-center">
                             <span>{food.name}</span>
-                            <span className="text-sm text-gray-500 dark:text-gray-400">{food.calories} kcal</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{food.calories} kcal / {food.servingSize}{food.servingUnit}</span>
                         </li>
                     ))}
                 </ul>
@@ -317,10 +394,11 @@ const AddFoodView: React.FC<AddFoodViewProps> = ({ onAddEntry }) => {
 
   return (
     <div className="space-y-4">
-        <div className="flex bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+        <div className="grid grid-cols-4 gap-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
             <button onClick={() => setActiveTab('search')} className={`flex-1 py-2 px-4 rounded-md text-sm font-semibold transition-colors ${activeTab === 'search' ? 'bg-white dark:bg-gray-800 text-emerald-600 shadow' : 'text-gray-600 dark:text-gray-300'}`}>Search</button>
             <button onClick={() => setActiveTab('scan')} className={`flex-1 py-2 px-4 rounded-md text-sm font-semibold transition-colors ${activeTab === 'scan' ? 'bg-white dark:bg-gray-800 text-emerald-600 shadow' : 'text-gray-600 dark:text-gray-300'}`}>Scan</button>
             <button onClick={() => setActiveTab('voice')} className={`flex-1 py-2 px-4 rounded-md text-sm font-semibold transition-colors ${activeTab === 'voice' ? 'bg-white dark:bg-gray-800 text-emerald-600 shadow' : 'text-gray-600 dark:text-gray-300'}`}>Voice</button>
+            <button onClick={() => setActiveTab('photo')} className={`flex-1 py-2 px-4 rounded-md text-sm font-semibold transition-colors ${activeTab === 'photo' ? 'bg-white dark:bg-gray-800 text-emerald-600 shadow' : 'text-gray-600 dark:text-gray-300'}`}>Photo</button>
         </div>
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md min-h-[250px]">
             {renderContent()}

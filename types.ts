@@ -33,8 +33,13 @@ export enum MealType {
 
 export type View = 'dashboard' | 'add-food' | 'settings';
 
-export interface GeminiFoodResult {
-  searchTerm: string;
+export interface GeminiFoodResponse {
+  name: string;
+  calories: number; // per serving size
+  protein: number;
+  carbs: number;
+  fat: number;
+  servingSize: number;
+  servingUnit: string;
   quantity: number;
-  unit: string;
 }
